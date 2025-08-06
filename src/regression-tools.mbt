@@ -5,8 +5,42 @@ struct LinearRegression {
 }
 
 ///|
+pub fn mean_vertical(matrix : @lmut.Matrix[Double]) -> @lmut.Matrix[Double] {
+  let row = @lmut.Matrix::row(matrix)
+  let col = @lmut.Matrix::col(matrix)
+  @lmut.Matrix::make(1, col, fn(_, j) {
+    let mut sum = 0.0
+    for k in 0..<row {
+      sum = sum + matrix[k][j]
+    }
+    sum / row.to_double()
+  })
+}
+
+test "mean" {
+  let x = @lmut.Matrix::from_2d_array([
+    [1.0, 1.0],
+    [2.0, 3.0],
+    [3.0, 4.0],
+    [2.0, 3.0],
+  ])
+  inspect(mean_vertical(x), content = "|2, 2.75|")
+}
+
+///|
 pub fn LinearRegression::new() -> LinearRegression {
   return { coef_: @lmut.Matrix::from_2d_array([[]]), intercept_: 0.0 }
+}
+
+///|
+impl Show for LinearRegression with output(self, logger) {
+  logger.write_string("Linear regression:\n")
+  let rows = self.coef_.row()
+  logger.write_string("y = \{self.intercept_}")
+  for i in 1..<rows {
+    logger.write_string(" + \{self.coef_[i][0]} * x _ \{i}")
+  }
+  logger.write_string(" + ϵ")
 }
 
 ///|
@@ -22,13 +56,32 @@ pub fn fit(
   match @lmut.Matrix::inverse(xtx) {
     Some(xtx_inv) => {
       let coeff = xtx_inv * x_trans * y
-      let rows = @lmut.Matrix::row(coeff)
-      self.coef_ = @lmut.Matrix::make(rows - 1, 1, fn(i, j) { coeff[i + 1][j] })
+      self.coef_ = coeff
       self.intercept_ = coeff[0][0]
     }
-    None => abort("Matrix is not invertible")
+    None => abort("Unable to perform Linear Regression method.")
   }
   return
+}
+
+///|
+pub fn compute_residuals(
+  x : @lmut.Matrix[Double],
+  y : @lmut.Matrix[Double],
+  coef : @lmut.Matrix[Double],
+  intercept : Double,
+) -> @lmut.Matrix[Double] {
+  let n = @lmut.Matrix::row(x)
+  let col = @lmut.Matrix::col(x)
+  let residuals = @lmut.Matrix::new(n, 1, 0.0)
+  for i in 0..<n {
+    let mut predicted = intercept
+    for j in 0..<col {
+      predicted = predicted + x[i][j] * coef[j][0]
+    }
+    residuals[i][0] = y[i][0] - predicted
+  }
+  residuals
 }
 
 ///|
@@ -43,13 +96,43 @@ test "LinearRegression::fit" {
   ])
   let y = @lmut.Matrix::from_2d_array([[6.0], [14.0], [19.0], [15.0]])
   lr.fit(x, y)
-  inspect(lr.coef_, content=(
-    #||0.500000000000103|
-    #||3.999999999999954|
-  ))
+  inspect(
+    lr.coef_,
+    content=(
+      #||1.499999999999968|
+      #||0.500000000000103|
+      #||3.999999999999954|
+    ),
+  )
   inspect(lr.intercept_, content="1.499999999999968")
+  inspect(
+    lr,
+    content=(
+      #|Linear regression:
+      #|y = 1.499999999999968 + 0.500000000000103 * x _ 1 + 3.999999999999954 * x _ 2 + ϵ
+    ),
+  )
 }
 
+///|
+test "LinearRegression:" {
+  let lr = LinearRegression::new()
+  // Simple linear regression: y = 2x1 + 3x2 + 1
+  let x = @lmut.Matrix::from_2d_array([[1.0], [1.0], [1.0]])
+  let y = @lmut.Matrix::from_2d_array([[6.0], [14.0], [19.0]])
+  lr.fit(x, y)
+  inspect(lr.coef_, content="||")
+  inspect(lr.intercept_, content="0")
+  inspect(
+    lr,
+    content=(
+      #|Linear regression:
+      #|y = 0 + ϵ
+    ),
+  )
+}
+
+///|
 test "LinearRegression::fit_simple" {
   let lr = LinearRegression::new()
   // 更简单的测试数据：y = 2x + 1
@@ -59,12 +142,32 @@ test "LinearRegression::fit_simple" {
     [1.0, 2.0],
     [2.0, 2.0],
   ])
-  let y = @lmut.Matrix::from_2d_array([[6.0], [8.0], [9.0], [11.0]])
+  let y = @lmut.Matrix::from_2d_array([[5.0], [8.0], [9.0], [11.0]])
   lr.fit(x, y)
-  
-  inspect(lr.coef_, content=(
-    #||2.0000000000000027|
-    #||3.0000000000000027|
-  ))
-  inspect(lr.intercept_, content="0.9999999999999893")
+  let residual = compute_residuals(x, y, lr.coef_, lr.intercept_)
+  inspect(
+    lr.coef_,
+    content=(
+      #||-0.7500000000000142|
+      #||2.500000000000003|
+      #||3.5000000000000036|
+    ),
+  )
+  inspect(lr.intercept_, content="-0.7500000000000142")
+  inspect(
+    lr,
+    content=(
+      #|Linear regression:
+      #|y = -0.7500000000000142 + 2.500000000000003 * x _ 1 + 3.5000000000000036 * x _ 2 + ϵ
+    ),
+  )
+  inspect(
+    residual,
+    content=(
+      #||4.000000000000025|
+      #||7.750000000000039|
+      #||5.500000000000022|
+      #||8.250000000000036|
+    ),
+  )
 }
