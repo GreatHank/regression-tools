@@ -4,17 +4,17 @@
       "path": "Luna-Flow/luna-generic",
       "alias": "lg"
     },
-    {
-      "path":"moonbitlang/quickcheck",
-      "alias": "qc"
-    },
+//    {
+//      "path":"moonbitlang/quickcheck",
+//      "alias": "qc"
+//    },
     {
       "path":"Luna-Flow/linear-algebra/mutable",
       "alias":"lmut"
-    },
-    {
-      "path":"Luna-Flow/linear-algebra/immut",
-      "alias":"limmut"
     }
+//    {
+//      "path":"Luna-Flow/linear-algebra/immut",
+//      "alias":"limmut"
+//    }
   ]
 }

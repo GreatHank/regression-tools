@@ -5,18 +5,6 @@ struct LinearRegression {
 }
 
 ///|
-pub fn mean_vertical(matrix : @lmut.Matrix[Double]) -> @lmut.Matrix[Double] {
-  let row = @lmut.Matrix::row(matrix)
-  let col = @lmut.Matrix::col(matrix)
-  @lmut.Matrix::make(1, col, fn(_, j) {
-    let mut sum = 0.0
-    for k in 0..<row {
-      sum = sum + matrix[k][j]
-    }
-    sum / row.to_double()
-  })
-}
-
 test "mean" {
   let x = @lmut.Matrix::from_2d_array([
     [1.0, 1.0],
@@ -24,7 +12,7 @@ test "mean" {
     [3.0, 4.0],
     [2.0, 3.0],
   ])
-  inspect(mean_vertical(x), content = "|2, 2.75|")
+  inspect(mean_vertical(x), content="|2, 2.75|")
 }
 
 ///|
@@ -62,26 +50,6 @@ pub fn fit(
     None => abort("Unable to perform Linear Regression method.")
   }
   return
-}
-
-///|
-pub fn compute_residuals(
-  x : @lmut.Matrix[Double],
-  y : @lmut.Matrix[Double],
-  coef : @lmut.Matrix[Double],
-  intercept : Double,
-) -> @lmut.Matrix[Double] {
-  let n = @lmut.Matrix::row(x)
-  let col = @lmut.Matrix::col(x)
-  let residuals = @lmut.Matrix::new(n, 1, 0.0)
-  for i in 0..<n {
-    let mut predicted = intercept
-    for j in 0..<col {
-      predicted = predicted + x[i][j] * coef[j][0]
-    }
-    residuals[i][0] = y[i][0] - predicted
-  }
-  residuals
 }
 
 ///|
@@ -144,7 +112,10 @@ test "LinearRegression::fit_simple" {
   ])
   let y = @lmut.Matrix::from_2d_array([[5.0], [8.0], [9.0], [11.0]])
   lr.fit(x, y)
-  let residual = compute_residuals(x, y, lr.coef_, lr.intercept_)
+  let residual = get_residuals(
+    y,
+    lr_get_predict_data(x, lr.coef_, lr.intercept_),
+  )
   inspect(
     lr.coef_,
     content=(
